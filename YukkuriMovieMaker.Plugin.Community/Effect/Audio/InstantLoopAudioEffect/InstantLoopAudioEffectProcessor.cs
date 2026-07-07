@@ -21,6 +21,9 @@ namespace YukkuriMovieMaker.Plugin.Community.Effect.Audio.InstantLoopAudioEffect
         {
             if (Input is null) return 0;
 
+            //奇数サンプルを書き出すとPositionが奇数に進み、以降のL/Rペアリングとフレーム計算がずれるため偶数に丸める
+            count -= count % Channels;
+
             int written = 0;
 
             while (written < count)
