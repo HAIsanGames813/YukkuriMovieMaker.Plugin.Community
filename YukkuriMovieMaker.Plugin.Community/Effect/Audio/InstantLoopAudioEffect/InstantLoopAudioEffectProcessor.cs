@@ -6,8 +6,6 @@ namespace YukkuriMovieMaker.Plugin.Community.Effect.Audio.InstantLoopAudioEffect
     {
         const int Channels = 2;
 
-        readonly InstantLoopAudioEffect _item = item;
-
         public override int Hz => Input?.Hz ?? 0;
         public override long Duration => Input?.Duration ?? 0;
 
@@ -77,10 +75,10 @@ namespace YukkuriMovieMaker.Plugin.Community.Effect.Audio.InstantLoopAudioEffect
         FrameInfo Resolve(long currentFrame)
         {
             long totalFrames = Duration / Channels;
-            long startOffsetFrames = MsToFrames(_item.StartOffset.GetValue(currentFrame, totalFrames, Hz));
-            long intervalFrames = Math.Max(1L, MsToFrames(_item.Interval.GetValue(currentFrame, totalFrames, Hz)));
-            long gapFrames = Math.Max(0L, MsToFrames(_item.Gap.GetValue(currentFrame, totalFrames, Hz)));
-            int repeatCountInt = (int)Math.Round(_item.RepeatCount.GetValue(currentFrame, totalFrames, Hz));
+            long startOffsetFrames = MsToFrames(item.StartOffset.GetValue(currentFrame, totalFrames, Hz));
+            long intervalFrames = Math.Max(1L, MsToFrames(item.Interval.GetValue(currentFrame, totalFrames, Hz)));
+            long gapFrames = Math.Max(0L, MsToFrames(item.Gap.GetValue(currentFrame, totalFrames, Hz)));
+            int repeatCountInt = (int)Math.Round(item.RepeatCount.GetValue(currentFrame, totalFrames, Hz));
             bool infinite = repeatCountInt <= 0;
             long cycleFrames = intervalFrames + gapFrames;
             long loopEndFrame = infinite ? long.MaxValue : (long)repeatCountInt * cycleFrames;
