@@ -81,7 +81,8 @@ namespace YukkuriMovieMaker.Plugin.Community.Effect.Audio.InstantLoopAudioEffect
             int repeatCountInt = (int)Math.Round(item.RepeatCount.GetValue(currentFrame, totalFrames, Hz));
             bool infinite = repeatCountInt <= 0;
             long cycleFrames = intervalFrames + gapFrames;
-            long loopEndFrame = infinite ? long.MaxValue : (long)repeatCountInt * cycleFrames;
+            //初回再生はエフェクトなしでも聞こえる分なので、指定回数ぶん巻き戻すには+1サイクル必要
+            long loopEndFrame = infinite ? long.MaxValue : (repeatCountInt + 1L) * cycleFrames;
 
             if (infinite || currentFrame < loopEndFrame)
             {
