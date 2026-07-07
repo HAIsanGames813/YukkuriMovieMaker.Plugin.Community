@@ -105,9 +105,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Effect.Audio.InstantLoopAudioEffect
                     int readCount = Input.Read(buffer, offset + written, chunkFloats);
                     if (readCount <= 0)
                     {
-                        Array.Clear(buffer, offset + written, remaining);
-                        written += remaining;
-                        break;
+                        //ソース終端に達した場合もこのチャンク分だけ無音化して続行する
+                        //（次のサイクルで巻き戻せばまだ音声が存在する可能性がある）
+                        Array.Clear(buffer, offset + written, chunkFloats);
+                        written += chunkFloats;
+                        continue;
                     }
                     written += readCount;
                 }
