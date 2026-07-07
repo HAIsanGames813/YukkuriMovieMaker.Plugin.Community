@@ -29,56 +29,11 @@ namespace YukkuriMovieMaker.Plugin.Community.Effect.Audio.InstantLoopAudioEffect
             {
                 int remaining = count - written;
                 long currentFrame = (Position + written) / Channels;
-                long totalFrames = Duration / Channels;
-                long startOffsetFrames = MsToFrames(
-                    _item.StartOffset.GetValue(currentFrame, totalFrames, Hz));
-                long intervalFrames = Math.Max(1L, MsToFrames(
-                    _item.Interval.GetValue(currentFrame, totalFrames, Hz)));
-                long gapFrames = Math.Max(0L, MsToFrames(
-                    _item.Gap.GetValue(currentFrame, totalFrames, Hz)));
-                int repeatCountInt = (int)Math.Round(
-                    _item.RepeatCount.GetValue(currentFrame, totalFrames, Hz));
-                bool infinite = repeatCountInt <= 0;
+                var info = Resolve(currentFrame);
 
-                long cycleFrames = intervalFrames + gapFrames;
-                long loopEndFrame = infinite ? long.MaxValue : (long)repeatCountInt * cycleFrames;
-                long sourceFrame;
-                bool isGap;
-                long framesUntilBoundary;
-
-                if (infinite || currentFrame < loopEndFrame)
-                {
-                    long posInCycle = currentFrame % cycleFrames;
-
-                    if (posInCycle < intervalFrames)
-                    {                        
-                        isGap = false;
-                        sourceFrame = startOffsetFrames + posInCycle;
-                        long toEndOfPlay = intervalFrames - posInCycle;
-                        framesUntilBoundary = infinite
-                            ? toEndOfPlay
-                            : Math.Min(toEndOfPlay, loopEndFrame - currentFrame);
-                    }
-                    else
-                    {
-                        isGap = true;
-                        sourceFrame = -1;
-                        long toEndOfGap = cycleFrames - posInCycle;
-                        framesUntilBoundary = infinite
-                            ? toEndOfGap
-                            : Math.Min(toEndOfGap, loopEndFrame - currentFrame);
-                    }
-                }
-                else
-                {
-                    isGap = false;
-                    long pastLoopFrames = currentFrame - loopEndFrame;
-                    sourceFrame = startOffsetFrames + intervalFrames + pastLoopFrames;
-                    framesUntilBoundary = long.MaxValue;
-                }
-                long maxFrames = framesUntilBoundary == long.MaxValue
+                long maxFrames = info.FramesUntilBoundary == long.MaxValue
                     ? (long)(remaining / Channels)
-                    : Math.Min(framesUntilBoundary, (long)(remaining / Channels));
+                    : Math.Min(info.FramesUntilBoundary, (long)(remaining / Channels));
                 int chunkFloats = (int)(maxFrames * Channels);
 
                 if (chunkFloats <= 0)
@@ -91,14 +46,14 @@ namespace YukkuriMovieMaker.Plugin.Community.Effect.Audio.InstantLoopAudioEffect
                     break;
                 }
 
-                if (isGap)
+                if (info.IsGap)
                 {
                     Array.Clear(buffer, offset + written, chunkFloats);
                     written += chunkFloats;
                 }
                 else
                 {
-                    long expectedInputPos = sourceFrame * Channels;
+                    long expectedInputPos = info.SourceFrame * Channels;
                     if (Input.Position != expectedInputPos)
                         Input.Seek(expectedInputPos);
 
@@ -117,7 +72,7 @@ namespace YukkuriMovieMaker.Plugin.Community.Effect.Audio.InstantLoopAudioEffect
 
             return written;
         }
-        readonly record struct FrameInfo(long SourceFrame, bool IsGap);
+        readonly record struct FrameInfo(long SourceFrame, bool IsGap, long FramesUntilBoundary);
 
         FrameInfo Resolve(long currentFrame)
         {
@@ -134,14 +89,26 @@ namespace YukkuriMovieMaker.Plugin.Community.Effect.Audio.InstantLoopAudioEffect
             {
                 long posInCycle = currentFrame % cycleFrames;
                 if (posInCycle < intervalFrames)
-                    return new FrameInfo(startOffsetFrames + posInCycle, false);
+                {
+                    long toEndOfPlay = intervalFrames - posInCycle;
+                    long framesUntilBoundary = infinite
+                        ? toEndOfPlay
+                        : Math.Min(toEndOfPlay, loopEndFrame - currentFrame);
+                    return new FrameInfo(startOffsetFrames + posInCycle, false, framesUntilBoundary);
+                }
                 else
-                    return new FrameInfo(-1, true);
+                {
+                    long toEndOfGap = cycleFrames - posInCycle;
+                    long framesUntilBoundary = infinite
+                        ? toEndOfGap
+                        : Math.Min(toEndOfGap, loopEndFrame - currentFrame);
+                    return new FrameInfo(-1, true, framesUntilBoundary);
+                }
             }
             else
             {
                 long pastLoopFrames = currentFrame - loopEndFrame;
-                return new FrameInfo(startOffsetFrames + intervalFrames + pastLoopFrames, false);
+                return new FrameInfo(startOffsetFrames + intervalFrames + pastLoopFrames, false, long.MaxValue);
             }
         }
 
